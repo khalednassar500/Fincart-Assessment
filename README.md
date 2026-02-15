@@ -1,19 +1,16 @@
 # Fincart – Interactive Shipping Calculator
 
-This project is a Quick Quote engine built with React, TypeScript, and Material UI.
+A Quick Quote engine that lets merchants compare courier rates side by side. Built with React, TypeScript, and Material UI.
 
-The goal is to help merchants quickly compare courier rates in a clean and practical interface, reducing decision friction during shipment creation.
-
-The focus of this implementation was clarity in data flow, modular UI components, predictable state management, and a smooth async experience.
+The idea is simple — fill in where the package is going, how heavy it is, and instantly see what each courier would charge. No clutter, no guessing.
 
 ---
 
 ## Tech Stack
 
-- React (Vite)
+- React 19 + Vite
 - TypeScript
-- React Hook Form
-- Zod
+- React Hook Form + Zod
 - Material UI (MUI)
 - Context API
 
@@ -21,111 +18,114 @@ The focus of this implementation was clarity in data flow, modular UI components
 
 ## Project Structure
 
-The project is organized into:
+```
+src/
+├── components/       – UI pieces (CourierCard, QuoteForm, SidebarSummary, state screens)
+├── context/          – QuoteContext that holds all shared state
+├── hooks/            – useQuote hook for accessing context
+├── schemas/          – Zod validation schemas (one per form step)
+├── api/              – Mock courier data and pricing logic
+├── types/            – TypeScript interfaces and country list
+└── theme/            – MUI theme (colors, typography, component overrides)
+```
 
-- `components/` – Reusable UI components (CourierCard, SidebarSummary, states, etc.)
-- `context/` – Centralized QuoteContext for shared state
-- `forms/` – Multi-step form logic (Origin, Destination, Package)
-- `theme/` – MUI theme configuration
-- `services/` – Mock courier rate fetching logic
-
-The structure keeps business logic separate from presentation logic.
+I tried to keep things where you'd expect to find them. Business logic stays out of components, validation lives in its own folder, and the UI just renders what the context tells it to.
 
 ---
 
-## Multi-Step Form
+## How the Form Works
 
-The form is divided into three steps:
+The form has three steps:
 
-1. Origin Details
-2. Destination Details
-3. Package Details
+1. **Origin** – where the package ships from (country, city, postal code)
+2. **Destination** – where it's going
+3. **Package** – weight and dimensions
 
-Each step uses `react-hook-form` with Zod validation.
+Each step has its own `useForm()` instance with a Zod schema, so typing in one step doesn't cause the others to re-render. Validation is scoped per step — you can't move forward until the current step is valid.
 
-Key validation rules:
+Key rules:
 
 - Weight must be greater than zero
-- International shipping requires valid country codes
-
-Steps are isolated to avoid unnecessary re-renders and to keep validation scoped to each stage.
+- Country codes are validated against a known list (important for international shipping)
 
 ---
 
 ## State Management
 
-Global state is handled using React Context (`QuoteContext`) to avoid prop drilling.
+Everything flows through `QuoteContext`. No prop drilling.
 
-The context manages:
+The context holds:
 
-- Form data
-- Courier results
-- Loading state
-- Error state
-- Search action
+- The accumulated form data (origin, destination, package details)
+- Courier results from the search
+- Current loading/error/empty status
+- The `searchCouriers` function
 
-The sidebar updates in real-time as the user modifies weight or destination inputs.
-
----
-
-## Async States
-
-The Search action simulates an API request.
-
-The UI handles the following states:
-
-- Initial (before search)
-- Loading (Skeleton placeholders)
-- Success (courier cards displayed)
-- Empty (no couriers available for route)
-- Error (retry option shown)
-
-In a real production environment, if a courier provider (e.g., DHL) failed:
-
-- The failure would be caught per provider
-- Partial results would still be returned
-- The UI would show a non-blocking warning
-- Errors would be logged for monitoring
+The `SidebarSummary` reads directly from context, so it updates in real time as the user fills in the form — they can see their shipment details building up before they even hit search.
 
 ---
 
-## UI & Design System
+## What Happens When You Search
 
-Material UI is used with a centralized theme configuration.
+The search simulates an API call with a 1.5s delay. The UI handles five states:
 
-- `CourierCard` is modular and reusable
-- Base price and tax are displayed separately
-- Cheapest and Fastest options are calculated dynamically
-- Highlighting is done using MUI `Chip` components
-- Styling uses `sx` props and theme tokens for consistency
+| State       | What the user sees                                     |
+| ----------- | ------------------------------------------------------ |
+| **Initial** | A prompt to fill out the form                          |
+| **Loading** | Skeleton cards that match the shape of real results    |
+| **Success** | Courier cards with pricing, delivery times, and badges |
+| **Empty**   | A message saying no couriers serve that route          |
+| **Error**   | The error message + a retry button                     |
+
+### How I'd Handle This in Production
+
+If a real courier API went down (say DHL's rate service returns 500):
+
+- I'd catch the failure **per provider**, not kill the whole search
+- The user would still see results from FedEx, UPS, etc.
+- A small warning banner would say something like "DHL rates temporarily unavailable"
+- The failed request would retry with exponential backoff (1s → 2s → 4s, max 3 attempts)
+- Errors would go to Sentry or similar for monitoring
+- As a fallback, I'd consider showing cached rates with a "rates may be outdated" label
 
 ---
 
-## Performance Considerations
+## UI Decisions
 
-- Context value is memoized to reduce unnecessary re-renders
-- Form steps are separated to isolate render scope
-- Vite manual chunk splitting is configured for better bundle control
-- MUI imports are kept modular
+- `CourierCard` shows base price and tax separately so merchants see exactly what they're paying
+- The cheapest and fastest options get `Chip` badges automatically — no manual flagging
+- Cards get a colored top border (gold for cheapest, blue for fastest, green if both)
+- Everything uses MUI's `sx` prop and theme tokens so the styling stays consistent
 
-For slower network environments (e.g., 3G):
+---
 
-- Lazy loading could be introduced for non-critical components
-- API responses should be compressed and cached
-- Server-side aggregation could reduce client work
+## Performance
+
+What's already in place:
+
+- Each form step has its own `useForm()` — keystrokes don't re-render the whole page
+- Context value is wrapped in `useMemo` so consumers only re-render when data actually changes
+- `CourierCard` uses `React.memo` to skip re-renders when props haven't changed
+- Vite splits the bundle into separate chunks (MUI, form libs, app code)
+
+What I'd add for slow connections (3G in emerging markets):
+
+- `React.lazy` + `Suspense` for the results panel (not needed until the user searches)
+- Gzip/Brotli compression on the server
+- Cache headers on API responses
+- Move rate aggregation server-side so the client gets one small payload instead of hitting multiple APIs
+- Self-host a subset of the Inter font instead of loading the full family from Google
 
 ---
 
 ## Responsive Layout
 
-Mobile-first approach:
-
-- Small screens: vertical stacking with drawer sidebar
-- Larger screens: multi-column layout for side-by-side comparison
+- **Mobile**: cards stack vertically, sidebar moves into a drawer (accessible via a floating button)
+- **Desktop**: three-column layout — sidebar, form, and results sit next to each other
 
 ---
 
-## Running the Project
+## Running It
 
 ```bash
 npm install
