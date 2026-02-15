@@ -36,9 +36,9 @@ const SkeletonCard = memo(SkeletonCardComponent);
 
 export function LoadingState() {
   return (
-    <Grid container spacing={3}>
+    <Grid container spacing={2.5}>
       {[1, 2, 3, 4, 5, 6].map((i) => (
-        <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={i}>
+        <Grid size={{ xs: 12, sm: 6, md: 6, lg: 4, xl: 4 }} key={i}>
           <SkeletonCard />
         </Grid>
       ))}

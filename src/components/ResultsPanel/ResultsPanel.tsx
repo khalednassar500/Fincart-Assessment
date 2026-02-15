@@ -99,9 +99,12 @@ export function ResultsPanel() {
           </Button>
         </Stack>
 
-        <Grid container spacing={3}>
+        <Grid container spacing={2.5}>
           {couriers.map((courier) => (
-            <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={courier.id}>
+            <Grid
+              size={{ xs: 12, sm: 6, md: 6, lg: 4, xl: 4 }}
+              key={courier.id}
+            >
               <CourierCard
                 courier={courier}
                 isCheapest={courier.id === cheapestId}

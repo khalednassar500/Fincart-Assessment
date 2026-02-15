@@ -102,19 +102,24 @@ function App() {
         <Grid container spacing={3}>
           {/* Sidebar - Desktop only */}
           {!isMobile && (
-            <Grid size={{ md: 3 }}>
+            <Grid size={{ md: 3, lg: 2.5 }}>
               <SidebarSummary />
             </Grid>
           )}
 
-          {/* Form */}
-          <Grid size={{ xs: 12, md: isMobile ? 12 : 4 }}>
-            <QuoteForm />
-          </Grid>
+          {/* Main area: Form + Results stacked */}
+          <Grid size={{ xs: 12, md: isMobile ? 12 : 9, lg: 9.5 }}>
+            <Grid container spacing={3}>
+              {/* Form */}
+              <Grid size={{ xs: 12, md: 5, lg: 4 }}>
+                <QuoteForm />
+              </Grid>
 
-          {/* Results */}
-          <Grid size={{ xs: 12, md: isMobile ? 12 : 5 }}>
-            <ResultsPanel />
+              {/* Results */}
+              <Grid size={{ xs: 12, md: 7, lg: 8 }}>
+                <ResultsPanel />
+              </Grid>
+            </Grid>
           </Grid>
         </Grid>
       </Container>
